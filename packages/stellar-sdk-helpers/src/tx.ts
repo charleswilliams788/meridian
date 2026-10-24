@@ -3,8 +3,6 @@ import {
   Address,
   Contract,
   TransactionBuilder,
-  Transaction,
-  FeeBumpTransaction,
   Asset,
   Horizon,
   Operation,
@@ -17,7 +15,7 @@ import { BASE_FEE, passphraseFor, getRpcServer } from "./internal";
 import {
   withRetry,
   withRaceTimeout,
-  USDK_ISSUER,
+  USDC_ISSUER,
   MUSDC_ISSUER,
   CONTRACT_ADDRESSES,
 } from "@meridian/shared";
@@ -32,7 +30,7 @@ const SOROBAN_RPC_TIMEOUT_MS = 10_000;
 
 export class SorobanTimeoutError extends Error {
   constructor(ms: number) {
-    super(`Soroban RPC timed out after ${m}ms`);
+    super(`Soroban RPC timed out after ${ms}ms`);
     this.name = "SorobanTimeoutError";
   }
 }
@@ -66,7 +64,7 @@ function usdcAsset(network: StellarNetwork): Asset {
 }
 
 function musdcAsset(network: StellarNetwork): Asset {
-  const issuer = MUSCD_ISSUER[network.network];
+  const issuer = MUSDC_ISSUER[network.network];
   if (!issuer)
     throw new Error(`No mUSDC issuer for network: ${network.network}`);
   return new Asset("MUSDC", issuer);
@@ -111,7 +109,7 @@ export class MissingTrustlineError extends Error {
 
 /**
  * Query Horizon for the wallet's classic balances and throw {@link MissingTrustlineError} if any required USDC/mUSDC trustline is
- * absent. Networks where `MUSCD_ISSUER` is empty (SEP-41 cutover) skip the
+ * absent. Networks where `MUSDC_ISSUER` is empty (SEP-41 cutover) skip the
  * mUSDC check. An account that does not yet exist on Horizon is treated as
  * missing every required trustline.
  */
@@ -129,8 +127,8 @@ export async function assertRequiredTrustlines(
       ?.status;
     if (status === 404) {
       const missing: string[] = [];
-      if (USDK_ISSUER[network.network]) missing.push("USDC");
-      if (MUSCD_ISSUER[network.network]) missing.push("MUSDC");
+      if (USDC_ISSUER[network.network]) missing.push("USDC");
+      if (MUSDC_ISSUER[network.network]) missing.push("MUSDC");
       throw new MissingTrustlineError(missing.length ? missing : ["USDC"]);
     }
     throw err;
@@ -141,7 +139,7 @@ export async function assertRequiredTrustlines(
   if (usdcIssuer && !hasAssetTrustline(balances, "USDC", usdcIssuer)) {
     missing.push("USDC");
   }
-  const musdcIssuer = MUSCD_ISSUER[network.network];
+  const musdcIssuer = MUSDC_ISSUER[network.network];
   if (musdcIssuer && !hasAssetTrustline(balances, "MUSDC", musdcIssuer)) {
     missing.push("MUSDC");
   }
@@ -153,22 +151,6 @@ export function toStroops(value: string): bigint {
   const [whole = "0", frac = ""] = value.split(".");
   const fracPadded = frac.padEnd(7, "0").slice(0, 7);
   return BigInt(whole) * 10_000_000n + BigInt(fracPadded);
-}
-
-/**
- * Resolve the protocol name ("Blend" or "DeFindex") from a vault ID prefix.
- * Throws for unrecognised prefixes.
- *
- * This is part of the package's public surface: callers that receive a vault ID
- * from user input or an external system and need to dispatch to the correct
- * protocol adapter should use this helper rather than re-implementing the
- * prefix match in each call site. It is intended for consumption by api/,
- * apps/, and packages/api-core code that routes vault operations.
- */
-export function resolveProtocol(vaultId: string): "Blend" | "DeFindex" {
-  if (vaultId.startsWith("blend-")) return "Blend";
-  if (vaultId.startsWith("defindex-")) return "DeFindex";
-  throw new Error(`No protocol mapping for vault: ${vaultId}`);
 }
 
 /**
@@ -249,7 +231,7 @@ export async function prepareSorobanTx(
 /**
  * Build an unsigned Stellar transaction that adds a USDC trustline (and, on a
  * network where mUSDC still predates the #578 SEP-41 cutover, an mUSDC one
- * too; mUSDC never needs a trustline post-cutover, see `MUSCD_ISSUER` in
+ * too; mUSDC never needs a trustline post-cutover, see `MUSDC_ISSUER` in
  * constants.ts) for `walletAddress`. Skips any trustline that already
  * exists. Throws if all required trustlines are already present.
  */
@@ -269,7 +251,7 @@ export async function buildAddTrustlineTx(
   ) {
     ops.push(Operation.changeTrust({ asset: usdcAsset(network) }));
   }
-  const musdcIssuer = MUSCD_ISSUER[network.network];
+  const musdcIssuer = MUSDC_ISSUER[network.network];
   if (musdcIssuer && !hasAssetTrustline(balances, "MUSDC", musdcIssuer)) {
     ops.push(Operation.changeTrust({ asset: musdcAsset(network) }));
   }
@@ -347,7 +329,3 @@ export async function waitForTransaction(
     await sleep(pollIntervalMs);
   }
 }
-
-/**
- * User-facing copy
- */
