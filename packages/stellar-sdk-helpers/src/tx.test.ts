@@ -12,7 +12,6 @@ import {
 } from "@stellar/stellar-sdk";
 import {
   toStroops,
-  resolveProtocol,
   waitForTransaction,
   simErrorMessage,
   prepareSorobanTx,
@@ -433,22 +432,6 @@ describe("toStroops", () => {
 
   it("treats a missing fractional part as zero", () => {
     expect(toStroops("42")).toBe(420_000_000n);
-  });
-});
-
-describe("resolveProtocol", () => {
-  it("maps blend vault ids to Blend", () => {
-    expect(resolveProtocol("blend-usdc-fixed")).toBe("Blend");
-    expect(resolveProtocol("blend-eurc-variable")).toBe("Blend");
-  });
-
-  it("maps defindex vault ids to DeFindex", () => {
-    expect(resolveProtocol("defindex-usdc")).toBe("DeFindex");
-  });
-
-  it("throws for vault ids with no protocol mapping", () => {
-    expect(() => resolveProtocol("ondo-usdy")).toThrow(/No protocol mapping/);
-    expect(() => resolveProtocol("")).toThrow(/No protocol mapping/);
   });
 });
 

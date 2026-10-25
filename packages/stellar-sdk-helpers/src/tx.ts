@@ -156,13 +156,6 @@ export function toStroops(value: string): bigint {
   return BigInt(whole) * 10_000_000n + BigInt(fracPadded);
 }
 
-/** Resolve the protocol name ("Blend" or "DeFindex") from a vault ID prefix. Throws for unrecognised prefixes. */
-export function resolveProtocol(vaultId: string): "Blend" | "DeFindex" {
-  if (vaultId.startsWith("blend-")) return "Blend";
-  if (vaultId.startsWith("defindex-")) return "DeFindex";
-  throw new Error(`No protocol mapping for vault: ${vaultId}`);
-}
-
 /**
  * Execute a read-only Soroban contract call via simulation and return the
  * decoded native value. Returns `null` when the simulation succeeds but
